@@ -524,3 +524,5 @@ the [licensing map](docs/licensing.md) for details.
 <p align="center">
   <sub>If this project helps you, please consider giving it a star on GitHub.</sub>
 </p>
+---
+> 本仓库为 photo.heabl.xyz（heabl 相册）的部署源，fork 自 vsxd/afilmory-vercel。站点配置全部走 Vercel 环境变量（SITE_*/S3_*），照片源为 R2 bucket afilmory-photos。
