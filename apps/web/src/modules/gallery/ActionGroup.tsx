@@ -1,12 +1,11 @@
 import { Button } from "@afilmory/ui";
-import { useAtom, useAtomValue, useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import {
   gallerySettingAtom,
   isCommandPaletteOpenAtom,
-  responsiveGalleryColumnsAtom,
 } from "~/atoms/app";
 import { siteConfig } from "~/config";
 
@@ -16,13 +15,8 @@ import { ViewPanel } from "./panels/ViewPanel";
 export const ActionGroup = () => {
   const { t } = useTranslation();
   const [gallerySetting] = useAtom(gallerySettingAtom);
-  const columns = useAtomValue(responsiveGalleryColumnsAtom);
   const setCommandPaletteOpen = useSetAtom(isCommandPaletteOpenAtom);
   const navigate = useNavigate();
-
-  // 计算视图设置是否有自定义配置
-  const hasViewCustomization =
-    columns !== "auto" || gallerySetting.sortOrder !== "desc";
 
   // 计算过滤器数量
   const filterCount =
@@ -78,7 +72,6 @@ export const ActionGroup = () => {
       <ResponsiveActionButton
         icon="i-mingcute-layout-grid-line"
         title={t("action.view.title")}
-        badge={hasViewCustomization ? "●" : undefined}
         contentClassName="bg-material-thick border-fill-tertiary w-[24rem] max-w-[calc(100vw-2rem)] rounded-[1.5rem] border p-0 shadow-2xl ring-1 ring-accent/5 backdrop-blur-2xl"
       >
         <ViewPanel />

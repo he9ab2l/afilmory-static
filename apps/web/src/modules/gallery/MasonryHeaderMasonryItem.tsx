@@ -204,7 +204,7 @@ export const MasonryHeaderMasonryItem = ({
       )}
       style={style}
     >
-      <div className="px-6 pt-8 pb-6 text-center">
+      <div className="px-6 pt-8 pb-2 text-center">
         <div className="mb-4 flex justify-center">
           <div className="relative inline-flex">
             {siteConfig.author.avatar && (
@@ -350,10 +350,10 @@ export const MasonryHeaderMasonryItem = ({
               >
                 <div
                   className={clsxm(
-                    "inline-flex min-w-max flex-col items-center justify-center text-center",
-                    statsGridDensity === "normal" && "gap-0.5",
-                    statsGridDensity === "compact" && "gap-0.5",
-                    statsGridDensity === "tight" && "gap-0.5",
+                    "inline-flex min-w-max flex-row items-center justify-center",
+                    statsGridDensity === "normal" && "gap-1.5",
+                    statsGridDensity === "compact" && "gap-1",
+                    statsGridDensity === "tight" && "gap-1",
                   )}
                   title={`${stat.label}: ${stat.value}`}
                   role="group"
