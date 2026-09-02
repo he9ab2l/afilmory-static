@@ -54,13 +54,13 @@ export const siteConfig: SiteConfig = {
   title: "Afilmory Vercel",
   description: "A personal photography website",
   url: "https://afilmory.your.domain/",
-  accentColor: "#b3a6d6",
+  accentColor: "#9ca3af",
   language: "en",
   author: {
     name: "Author",
     url: "https://your.domain",
     avatar:
-      "https://img.heabl.top/file/yuanchuangquan/1788318012777.png",
+      "/avatar.webp",
   },
   social: {
     github: "",
