@@ -199,7 +199,7 @@ export const MasonryHeaderMasonryItem = ({
   return (
     <div
       className={clsxm(
-        "overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] shadow-[0_8px_40px_rgba(0,0,0,0.4)] backdrop-blur-2xl",
+        "overflow-hidden rounded-2xl border border-black/10 bg-white/70 shadow-[0_8px_40px_rgba(0,0,0,0.08)] backdrop-blur-2xl",
         className,
       )}
       style={style}
@@ -208,7 +208,7 @@ export const MasonryHeaderMasonryItem = ({
         <div className="mb-4 flex justify-center">
           <div className="relative inline-flex">
             {siteConfig.author.avatar && (
-              <AvatarPrimitive.Root className="inline-flex size-16 items-center justify-center overflow-hidden rounded-full ring-2 ring-white/20 shadow-xl">
+              <AvatarPrimitive.Root className="inline-flex size-16 items-center justify-center overflow-hidden rounded-full ring-2 ring-black/10 shadow-xl">
                 <AvatarPrimitive.Image
                   src={siteConfig.author.avatar}
                   className="size-full object-cover"

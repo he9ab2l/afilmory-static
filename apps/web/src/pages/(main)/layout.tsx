@@ -46,7 +46,7 @@ export const Component = () => {
       <PhotosProvider photos={photos}>
         {siteConfig.accentColor && (
           <style>{`
-          :root:has(input.theme-controller[value=dark]:checked), [data-theme="dark"] {
+          :root, [data-theme="light"], [data-theme="dark"] {
             --color-primary: ${siteConfig.accentColor};
             --color-accent: ${siteConfig.accentColor};
             --color-secondary: ${siteConfig.accentColor};

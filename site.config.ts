@@ -50,11 +50,11 @@ interface Social {
 }
 
 export const siteConfig: SiteConfig = {
-  name: "Afilmory Vercel",
-  title: "Afilmory Vercel",
+  name: "heabl photo",
+  title: "heabl photo",
   description: "A personal photography website",
   url: "https://afilmory.your.domain/",
-  accentColor: "#9ca3af",
+  accentColor: "#6b7280",
   language: "en",
   author: {
     name: "Author",
