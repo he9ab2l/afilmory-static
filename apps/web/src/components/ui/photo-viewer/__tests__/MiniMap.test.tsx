@@ -1,24 +1,8 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { MiniMap } from "../MiniMap";
-
-vi.mock("maplibre-gl", () => ({}));
-
-vi.mock("react-map-gl/maplibre", async () => {
-  const React = await import("react");
-
-  const MockMap = ({ onLoad }: { onLoad?: () => void }) => {
-    React.useEffect(() => {
-      onLoad?.();
-    }, [onLoad]);
-
-    return <div data-testid="mini-map-canvas" />;
-  };
-
-  return { default: MockMap };
-});
 
 vi.mock("react-router", () => ({
   Link: ({ to, children, ...props }: { to: string; children: ReactNode }) => (
@@ -34,39 +18,54 @@ vi.mock("react-i18next", () => ({
   }),
 }));
 
-vi.mock("~/lib/map/style", () => ({
-  getMapStyle: () => ({}),
+const mockDestroy = vi.fn();
+const mockLoadAMap = vi.fn();
+
+vi.mock("~/lib/amap/amap-loader", () => ({
+  loadAMap: () => mockLoadAMap(),
 }));
 
+const createMockAMap = () => ({
+  Map: class {
+    constructor() {
+      // 容器已挂载
+    }
+    destroy() {
+      mockDestroy();
+    }
+  },
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockLoadAMap.mockResolvedValue(createMockAMap());
+});
+
+afterEach(() => {
+  cleanup();
+});
+
 describe("MiniMap", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.stubGlobal(
-      "URL",
-      Object.assign(globalThis.URL ?? {}, {
-        createObjectURL: vi.fn(() => "blob:mock-url"),
-      }),
-    );
-  });
-
-  afterEach(() => {
-    cleanup();
-  });
-
-  it("renders when one coordinate is zero but the GPS pair is still valid", () => {
+  it("renders when one coordinate is zero but the GPS pair is still valid", async () => {
     render(<MiniMap latitude={0} longitude={120.5} photoId="photo-1" />);
 
-    expect(screen.getByTestId("mini-map-canvas")).not.toBeNull();
+    await waitFor(() => {
+      expect(screen.getByTestId("minimap-container")).not.toBeNull();
+    });
+    expect(mockLoadAMap).toHaveBeenCalled();
     expect(screen.getByRole("link").getAttribute("href")).toBe(
       "/explore?photoId=photo-1",
     );
   });
 
-  it("encodes photo ids before placing them in the explore query string", () => {
+  it("encodes photo ids before placing them in the explore query string", async () => {
     render(<MiniMap latitude={30} longitude={120.5} photoId="a&b#c" />);
 
-    const href = screen.getByRole("link").getAttribute("href");
+    await waitFor(() => {
+      expect(screen.getByTestId("minimap-container")).not.toBeNull();
+    });
 
+    const href = screen.getByRole("link").getAttribute("href");
     expect(href).toBe("/explore?photoId=a%26b%23c");
     expect(
       new URL(href!, "https://example.test").searchParams.get("photoId"),

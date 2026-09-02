@@ -3,16 +3,16 @@ import { useMemo } from "react";
 import { siteConfig } from "~/config";
 import { debugLog } from "~/lib/debug-log";
 
+import { createAMapAdapter } from "./AMapAdapter";
 import { MapContext } from "./map-context";
-import { createMapLibreAdapter } from "./MapLibreAdapter";
 
-const maplibreAdapter = createMapLibreAdapter();
+const amapAdapter = createAMapAdapter();
 
 const ADAPTERS = [
   {
-    name: "maplibre",
-    adapter: maplibreAdapter,
-    component: maplibreAdapter.MapComponent,
+    name: "amap",
+    adapter: amapAdapter,
+    component: amapAdapter.MapComponent,
   },
 ];
 

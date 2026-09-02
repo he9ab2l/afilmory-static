@@ -48,6 +48,10 @@ const envConfig: Partial<SiteConfig> = {
   },
   mapStyle: env.MAP_STYLE || baseSiteConfig.mapStyle,
   mapProjection: env.MAP_PROJECTION || baseSiteConfig.mapProjection,
+  amapKey: env.AMAP_JS_KEY || baseSiteConfig.amapKey || undefined,
+  amapSecurityCode:
+    env.AMAP_JS_SECURITY_CODE || baseSiteConfig.amapSecurityCode || undefined,
+  map: env.AMAP_MAP_ENABLED === "false" ? [] : (baseSiteConfig.map ?? ["amap"]),
 };
 
 function mergeSiteConfig(

@@ -22,13 +22,17 @@ export interface SiteConfig {
   map?: MapConfig;
   mapStyle?: string;
   mapProjection?: "globe" | "mercator";
+  /** 高德地图 JS API key（构建期从 env 注入） */
+  amapKey?: string;
+  /** 高德地图安全密钥 securityJsCode（2021-12 后必配） */
+  amapSecurityCode?: string;
 }
 
 /**
  * Map configuration: `map: ["maplibre"]` enables the map; omitting `map` (or
  * an empty array) disables it. The array form is reserved for future providers.
  */
-type MapConfig = "maplibre"[];
+type MapConfig = ("maplibre" | "amap")[];
 
 interface Feed {
   folo?: {
@@ -59,8 +63,7 @@ export const siteConfig: SiteConfig = {
   author: {
     name: "Author",
     url: "https://your.domain",
-    avatar:
-      "/avatar.webp",
+    avatar: "/avatar.webp",
   },
   social: {
     github: "",
@@ -75,9 +78,11 @@ export const siteConfig: SiteConfig = {
       },
     },
   },
-  map: ["maplibre"],
+  map: ["amap"],
   mapStyle: "builtin",
   mapProjection: "mercator",
+  amapKey: "",
+  amapSecurityCode: "",
 };
 
 export default siteConfig;

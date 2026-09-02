@@ -117,6 +117,10 @@ export const env = createEnv({
     // Map config (optional)
     MAP_STYLE: z.string().optional(), // 'builtin' or custom
     MAP_PROJECTION: z.enum(["globe", "mercator"]).optional(),
+    // 高德地图 JS API（前端渲染）
+    AMAP_JS_KEY: z.string().optional(),
+    AMAP_JS_SECURITY_CODE: z.string().optional(),
+    AMAP_MAP_ENABLED: z.enum(["true", "false"]).optional(),
 
     // Build-time reverse geocoding (optional)
     // The boolean switch is enum-constrained so a typo fails immediately at build
