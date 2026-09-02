@@ -434,7 +434,7 @@ export const CommandPalette = ({ isOpen, onClose }: CommandPaletteProps) => {
               aria-controls={isListboxVisible ? listboxDomId : undefined}
               aria-activedescendant={activeOptionDomId}
               aria-autocomplete="list"
-              className="text-text placeholder-text-tertiary h-full min-w-0 flex-1 bg-transparent text-base outline-none"
+              className="text-text placeholder-text-tertiary h-full min-w-0 flex-1 bg-transparent text-base outline-none" style={{ outline: "none", outlineStyle: "none" }}
             />
           </div>
         </div>
