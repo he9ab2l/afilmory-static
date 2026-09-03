@@ -5,8 +5,10 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import {
+  commitThumbnailEncoding,
   isThumbnailEncodingStale,
   THUMBNAIL_ENCODING_SIGNATURE,
+  THUMBNAIL_ENCODING_VERSION,
   writeThumbnailEncodingMarker,
 } from "./thumbnail.js";
 
@@ -60,5 +62,40 @@ describe("thumbnail encoding marker", () => {
 
     await expect(fs.readFile(outside, "utf8")).resolves.toBe("keep");
     expect((await fs.lstat(marker)).isSymbolicLink()).toBe(false);
+  });
+
+  it("does not prune anything when only writing the marker (cleanup is bound to regeneration)", async () => {
+    const staleJpeg = path.join(
+      dir,
+      `photo.${"a".repeat(64)}.000000000001.jpg`,
+    );
+    await fs.writeFile(staleJpeg, "old");
+
+    await writeThumbnailEncodingMarker(dir);
+
+    await expect(fs.readFile(staleJpeg, "utf-8")).resolves.toBe("old");
+  });
+
+  it("commitThumbnailEncoding writes the marker and prunes stale-encoding thumbnails", async () => {
+    const staleJpeg = path.join(
+      dir,
+      `photo.${"a".repeat(64)}.000000000001.jpg`,
+    );
+    const currentWebp = path.join(
+      dir,
+      `photo.${"b".repeat(64)}.${THUMBNAIL_ENCODING_VERSION}.webp`,
+    );
+    const unrelated = path.join(dir, "notes.txt");
+    await fs.writeFile(staleJpeg, "old");
+    await fs.writeFile(currentWebp, "current");
+    await fs.writeFile(unrelated, "keep");
+
+    await commitThumbnailEncoding(dir);
+
+    await expect(isThumbnailEncodingStale(dir)).resolves.toBe(false);
+
+    await expect(fs.stat(staleJpeg)).rejects.toMatchObject({ code: "ENOENT" });
+    await expect(fs.readFile(currentWebp, "utf-8")).resolves.toBe("current");
+    await expect(fs.readFile(unrelated, "utf-8")).resolves.toBe("keep");
   });
 });

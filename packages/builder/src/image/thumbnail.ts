@@ -44,6 +44,54 @@ export async function isThumbnailEncodingStale(
   }
 }
 
+// 缩略图图像扩展全集：当前编码（.webp）+ 历史遗留编码（.jpg/.jpeg/.avif）。
+// 清理路径（孤儿缩略图删除、编码切换清旧文件）要识别任意一代的缩略图文件；
+// 复用路径则由 isThumbnailFileNameForPhoto（含编码版本校验）把关，这里不校验版本。
+const THUMBNAIL_IMAGE_EXTENSIONS = "webp|jpe?g|avif";
+const THUMBNAIL_IMAGE_FILE_PATTERN = new RegExp(
+  `\\.(?:${THUMBNAIL_IMAGE_EXTENSIONS})$`,
+  "i",
+);
+// 当前编码版本的缩略图文件名形态（<id>.<sha256>.<version>.webp）。
+const CURRENT_ENCODING_THUMBNAIL_PATTERN = new RegExp(
+  `^.*\\.[\\da-f]{64}\\.${THUMBNAIL_ENCODING_VERSION}\\.webp$`,
+  "i",
+);
+/** 目录项是否为缩略图图像文件（任意一代编码），供清理路径过滤用。 */
+export function isThumbnailImageFileName(fileName: string): boolean {
+  return THUMBNAIL_IMAGE_FILE_PATTERN.test(fileName);
+}
+/**
+ * 删除目录里非当前编码版本的缩略图（旧 jpg、旧签名 webp）。签名不一致触发
+ * 全量重生成的构建成功收尾时调用——新产物已落盘、marker 已更新，此时删除
+ * 旧文件才安全；中途失败不会走到这里，旧缓存原样保留。
+ */
+export async function pruneThumbnailsWithStaleEncoding(
+  thumbnailsDir: string,
+): Promise<number> {
+  let entries;
+  try {
+    entries = await fs.readdir(thumbnailsDir, { withFileTypes: true });
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return 0;
+    throw error;
+  }
+
+  const staleNames = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => THUMBNAIL_IMAGE_FILE_PATTERN.test(name))
+    .filter((name) => !CURRENT_ENCODING_THUMBNAIL_PATTERN.test(name));
+
+  await Promise.all(
+    staleNames.map((name) =>
+      fs.rm(path.join(thumbnailsDir, name), { force: true }),
+    ),
+  );
+  return staleNames.length;
+}
+
+/** 只写 marker，不做任何清理。独立测试 marker 语义时用。 */
 export async function writeThumbnailEncodingMarker(
   thumbnailsDir: string,
 ): Promise<void> {
@@ -53,6 +101,25 @@ export async function writeThumbnailEncodingMarker(
   );
 }
 
+/**
+ * 全量重生成成功后的编码收尾：先写 marker，再清理旧编码缩略图。
+ * 顺序不能反——marker 落盘后这次构建才算「新编码成功」，此时删除旧文件
+ * 才安全；写 marker 失败（或后续构建失败）旧缓存原样保留，下次构建继续全量重试。
+ * 注意：清理必须绑定「重生成真的发生过」，所以入口只有 builder 的 force 收尾，
+ * 不能挂到 writeThumbnailEncodingMarker（那里还有测试和增量路径调用，会误删
+ * 尚未重生成的旧文件）。
+ */
+export async function commitThumbnailEncoding(
+  thumbnailsDir: string,
+): Promise<number> {
+  await writeThumbnailEncodingMarker(thumbnailsDir);
+  return pruneThumbnailsWithStaleEncoding(thumbnailsDir);
+}
+
+// 缩略图统一编码为 WebP（签名见 encoding-signature.ts）；文件名扩展是编码的
+// 一部分，改编码必须同步改扩展，让 URL 随编码参数变化。
+const THUMBNAIL_FILE_EXTENSION = ".webp";
+
 export function createThumbnailFileName(
   photoId: string,
   thumbnailBuffer: Uint8Array,
@@ -61,7 +128,7 @@ export function createThumbnailFileName(
     .createHash("sha256")
     .update(thumbnailBuffer)
     .digest("hex");
-  return `${photoId}.${contentHash}.${THUMBNAIL_ENCODING_VERSION}.jpg`;
+  return `${photoId}.${contentHash}.${THUMBNAIL_ENCODING_VERSION}${THUMBNAIL_FILE_EXTENSION}`;
 }
 
 export function getThumbnailPublicUrl(
@@ -70,7 +137,7 @@ export function getThumbnailPublicUrl(
 ): string {
   const filename = thumbnailBuffer
     ? createThumbnailFileName(photoId, thumbnailBuffer)
-    : `${photoId}.jpg`;
+    : `${photoId}${THUMBNAIL_FILE_EXTENSION}`;
   return getThumbnailPublicUrlForFileName(filename);
 }
 
@@ -96,11 +163,17 @@ export function isThumbnailFileNameForPhoto(
   fileName: string,
   photoId: string,
 ): boolean {
-  if (fileName === `${photoId}.jpg`) return true;
-  if (!fileName.startsWith(`${photoId}.`) || !fileName.endsWith(".jpg")) {
+  if (fileName === `${photoId}${THUMBNAIL_FILE_EXTENSION}`) return true;
+  if (
+    !fileName.startsWith(`${photoId}.`) ||
+    !fileName.endsWith(THUMBNAIL_FILE_EXTENSION)
+  ) {
     return false;
   }
-  const suffix = fileName.slice(photoId.length + 1, -4);
+  const suffix = fileName.slice(
+    photoId.length + 1,
+    -THUMBNAIL_FILE_EXTENSION.length,
+  );
   const [contentHash, encodingVersion, ...extra] = suffix.split(".");
   return (
     extra.length === 0 &&
@@ -109,12 +182,24 @@ export function isThumbnailFileNameForPhoto(
   );
 }
 
+/**
+ * 从缩略图文件名提取 photoId，兼容任意一代编码：内容寻址名
+ * `<id>.<sha256>.<version>.<ext>` 或 legacy bare 名 `<id>.<ext>`。
+ * 不校验编码版本——版本校验由 isThumbnailFileNameForPhoto 负责。
+ */
 export function getThumbnailPhotoIdFromFileName(
   fileName: string,
 ): string | null {
-  const addressed = fileName.match(/^(.*)\.[\da-f]{64}\.[\da-f]{12}\.jpg$/i);
+  const addressed = new RegExp(
+    `^(.*)\\.[\\da-f]{64}\\.[\\da-f]{12}\\.(?:${THUMBNAIL_IMAGE_EXTENSIONS})$`,
+    "i",
+  ).exec(fileName);
   if (addressed?.[1]) return addressed[1];
-  return fileName.endsWith(".jpg") ? fileName.slice(0, -4) : null;
+  const bare = new RegExp(
+    `^(.*)\\.(?:${THUMBNAIL_IMAGE_EXTENSIONS})$`,
+    "i",
+  ).exec(fileName);
+  return bare?.[1] ?? null;
 }
 
 export interface ExistingThumbnail {
@@ -159,7 +244,8 @@ export async function createThumbnailInventory(
       ) {
         return true;
       }
-      if (safeFileNames.has(`${photoId}.jpg`)) return true;
+      if (safeFileNames.has(`${photoId}${THUMBNAIL_FILE_EXTENSION}`))
+        return true;
       // A rewritten CDN basename is reusable only when exactly one local
       // artifact belongs to this photo; multiple versions are ambiguous.
       return countsByPhotoId.get(photoId) === 1;
@@ -178,7 +264,7 @@ async function isSafeRegularThumbnail(thumbnailPath: string): Promise<boolean> {
   }
 }
 
-/** Resolve both legacy `<id>.jpg` and content-addressed thumbnail caches. */
+/** Resolve both legacy `<id>.webp` and content-addressed thumbnail caches. */
 export async function resolveExistingThumbnail(
   photoId: string,
   thumbnailsDir: string,
@@ -187,7 +273,10 @@ export async function resolveExistingThumbnail(
   const preferredName = preferredUrl
     ? getThumbnailFileNameFromUrl(preferredUrl)
     : null;
-  const candidates = [preferredName, `${photoId}.jpg`].filter(
+  const candidates = [
+    preferredName,
+    `${photoId}${THUMBNAIL_FILE_EXTENSION}`,
+  ].filter(
     (candidate, index, all): candidate is string =>
       Boolean(candidate) &&
       all.indexOf(candidate) === index &&
@@ -326,7 +415,7 @@ async function generateNewThumbnail(
       .resize(THUMBNAIL_WIDTH, null, {
         withoutEnlargement: true,
       })
-      .jpeg({ quality: THUMBNAIL_QUALITY, mozjpeg: true })
+      .webp({ quality: THUMBNAIL_QUALITY, effort: 4 })
       .toBuffer();
 
     const fileName = createThumbnailFileName(photoId, thumbnailBuffer);
@@ -336,7 +425,7 @@ async function generateNewThumbnail(
     );
     const thumbnailUrl = getThumbnailPublicUrlForFileName(fileName);
 
-    // 原子落盘：普通 writeFile 中途被杀会留下截断的 .jpg，增量路径此后会
+    // 原子落盘：普通 writeFile 中途被杀会留下截断的 .webp，增量路径此后会
     // 永远复用这张坏图（thumbnailExists 只看存在性，不看完整性）。
     await writeFileAtomic(thumbnailPath, thumbnailBuffer);
 

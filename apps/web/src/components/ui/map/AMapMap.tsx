@@ -12,7 +12,8 @@ import type {
   AMapMarkerInstance,
   AMapSDK,
 } from "~/lib/amap/amap-types";
-import { createRegionMarkers } from "~/lib/geo-regions";
+import type { GpsLike } from "~/lib/amap/coord";
+import { toGcj02Points, wgs84ToGcj02 } from "~/lib/amap/coord";
 import { calculateMapBounds } from "~/lib/map-utils";
 import type { BaseMapProps, GeographicRegion, PhotoMarker } from "~/types/map";
 
@@ -50,7 +51,10 @@ const buildPhotoPinContent = (
   isSelected: boolean,
 ): string => {
   const src = marker.photo.thumbnailUrl || marker.photo.originalUrl || "";
-  const img = src ? `<img src="${src}" alt="" style="${PIN_STYLE.img}"/>` : "";
+  // 地图图钉最多同时存在上百个，视口外的图钉图一律懒加载/异步解码，避免与页面首屏抢带宽。
+  const img = src
+    ? `<img src="${src}" alt="" loading="lazy" decoding="async" style="${PIN_STYLE.img}"/>`
+    : "";
   const selectedStyle = isSelected ? PIN_STYLE.selected : "";
   return (
     `<div style="${PIN_STYLE.wrapper}${selectedStyle}" role="button" tabindex="0">${
@@ -168,7 +172,10 @@ export const AMapMap = ({
     const map = mapRef.current;
     if (!map) return;
     const { markers: ms, regions: rs, displayMode: mode } = propsRef.current;
-    const points = mode === "regions" ? createRegionMarkers(rs) : ms;
+    // regions 模式直接用区域本身（自带 bounds 中心经纬度）；两种形态都带
+    // longitude/latitude，无需再经 createRegionMarkers 转成 PhotoMarker——
+    // 那会把 photoCount/markers/label 等区域字段全部丢掉。
+    const points = mode === "regions" ? rs : ms;
     if (points.length === 0) {
       map.setZoom(2);
       return;
@@ -177,7 +184,7 @@ export const AMapMap = ({
     if (!bounds) return;
     try {
       map.setFitView(
-        points.map((p) => ({
+        toGcj02Points<GpsLike>(points).map((p) => ({
           getPosition: () => ({ lng: p.longitude, lat: p.latitude }),
         })),
         false,
@@ -226,16 +233,12 @@ export const AMapMap = ({
           />,
         );
       }
-      const position =
-        record.kind === "photo"
-          ? {
-              lng: (record.data as PhotoMarker).longitude,
-              lat: (record.data as PhotoMarker).latitude,
-            }
-          : {
-              lng: (record.data as GeographicRegion).longitude,
-              lat: (record.data as GeographicRegion).latitude,
-            };
+      // record.data 是 manifest 数据（WGS-84）；InfoWindow 锚点进入高德前转 GCJ-02。
+      const [infoLng, infoLat] = wgs84ToGcj02(
+        record.data.longitude,
+        record.data.latitude,
+      );
+      const position = { lng: infoLng, lat: infoLat };
       infoWindowRef.current.setContent(host);
       infoWindowRef.current.open(map, position);
     },
@@ -266,15 +269,18 @@ export const AMapMap = ({
 
     const { markers: ms, regions: rs, displayMode: mode } = propsRef.current;
     const isRegions = mode === "regions";
-    const source: Array<PhotoMarker | GeographicRegion> = isRegions
-      ? createRegionMarkers(rs)
-      : ms;
+    // 修复：regions 模式保留原始 GeographicRegion 作为聚合层数据——此前经
+    // createRegionMarkers 转成 PhotoMarker 后 photoCount/markers 等字段全部
+    // 丢失，图钉徽章和区域弹窗都会渲染出 undefined。两种形态都自带
+    // longitude/latitude（区域即 bounds 中心），lnglat 取值不变。
+    const source: Array<PhotoMarker | GeographicRegion> = isRegions ? rs : ms;
 
-    // 高德 v2.0 MarkerCluster 需要 { lnglat: [lng, lat] } 对象数组（非 Marker 实例）
-    const points = source.map((item) => ({
-      lnglat: [item.longitude, item.latitude],
-      _data: item,
-    }));
+    // 高德 v2.0 MarkerCluster 需要 { lnglat: [lng, lat] } 对象数组（非 Marker 实例）；
+    // manifest 坐标为 WGS-84，进入高德前统一转 GCJ-02。
+    const points = source.map((item) => {
+      const [lng, lat] = wgs84ToGcj02(item.longitude, item.latitude);
+      return { lnglat: [lng, lat] as [number, number], _data: item };
+    });
 
     const bindOnce = (marker: AMapMarkerInstance, handler: () => void) => {
       if (marker.getExtData?.() === "__bound__") return;
@@ -342,10 +348,14 @@ export const AMapMap = ({
       .then((amap) => {
         if (cancelled) return;
         const initial = initialViewState;
+        const [initLng, initLat] = wgs84ToGcj02(
+          initial?.longitude ?? 0,
+          initial?.latitude ?? 0,
+        );
         const map = new amap.Map(container, {
           viewMode: "3D",
           zoom: initial?.zoom ?? 2,
-          center: [initial?.longitude ?? 0, initial?.latitude ?? 0],
+          center: [initLng, initLat],
           pitch: 0,
           rotation: 0,
           mapStyle: AMAP_STYLE,
@@ -448,7 +458,9 @@ export const AMapMap = ({
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { longitude, latitude } = position.coords;
-        map.setZoomAndCenter(14, { lng: longitude, lat: latitude }, false);
+        // 浏览器 Geolocation 返回 WGS-84，与高德底图（GCJ-02）对齐后再定位。
+        const [lng, lat] = wgs84ToGcj02(longitude, latitude);
+        map.setZoomAndCenter(14, { lng, lat }, false);
         handlers?.onGeolocate?.(longitude, latitude);
       },
       () => {

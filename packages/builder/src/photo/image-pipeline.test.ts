@@ -203,7 +203,7 @@ describe("processPhotoWithPipeline thumbnail buffer lifetime", () => {
 
     expect(result.type).toBe("new");
     expect(result.item?.thumbnailUrl).toMatch(
-      /^\/thumbnails\/sunset\.[\da-f]{64}\.[\da-f]{12}\.jpg$/,
+      /^\/thumbnails\/sunset\.[\da-f]{64}\.[\da-f]{12}\.webp$/,
     );
 
     // afterPhotoProcess（thumbnail-storage 的上传钩子）必须看到真实 JPEG bytes。

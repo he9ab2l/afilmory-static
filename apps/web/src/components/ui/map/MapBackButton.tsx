@@ -24,6 +24,14 @@ export const MapBackButton = () => {
         { replace: true },
       );
     });
+    // 无障碍：图库列表（(main) 布局的 main#main-content，常驻挂载）在地图下方，
+    // 返回后把焦点显式送回列表，读屏/键盘用户不必从头 Tab 定位。
+    // preventScroll：列表滚动位置本就保留，聚焦不能把它拽回顶部。
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>("#main-content")
+        ?.focus({ preventScroll: true });
+    });
   };
 
   return (

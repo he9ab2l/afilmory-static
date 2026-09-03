@@ -56,12 +56,12 @@ describe("critical PWA precache policy", () => {
 
     expect(
       filterCriticalPrecacheManifest([
-        { url: "assets/index.js", revision: null, size: 1_750 * 1024 },
+        { url: "assets/index.js", revision: null, size: 4_000 * 1024 },
       ]).manifest,
     ).toHaveLength(1);
     expect(() =>
       filterCriticalPrecacheManifest([
-        { url: "assets/index.js", revision: null, size: 1_801 * 1024 },
+        { url: "assets/index.js", revision: null, size: 4_100 * 1024 },
       ]),
     ).toThrow("PWA critical precache");
   });

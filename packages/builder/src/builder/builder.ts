@@ -2,9 +2,9 @@ import type { BuilderServices } from "../core/contracts/services.js";
 import { createBuilderServices } from "../core/services/index.js";
 import { ExifService } from "../image/exif.js";
 import {
+  commitThumbnailEncoding,
   isThumbnailEncodingStale,
   THUMBNAIL_ENCODING_SIGNATURE,
-  writeThumbnailEncodingMarker,
 } from "../image/thumbnail.js";
 import { logger } from "../logger/index.js";
 import { loadExistingManifestWithDiagnostics } from "../manifest/manager.js";
@@ -474,7 +474,14 @@ export class AfilmoryBuilder {
         wasThumbnailForce &&
         shouldWriteThumbnailEncodingMarker(result, wasThumbnailForce)
       ) {
-        await writeThumbnailEncodingMarker(this.config.output.thumbnailsDir);
+        const pruned = await commitThumbnailEncoding(
+          this.config.output.thumbnailsDir,
+        );
+        if (pruned > 0) {
+          logger.main.info(
+            `🧹 Pruned ${pruned} stale-encoding thumbnail file(s) (${THUMBNAIL_ENCODING_SIGNATURE}).`,
+          );
+        }
       } else if (wasThumbnailForce && result.failedCount > 0) {
         logger.main.warn(
           "⚠️ Some photos failed during this force-regeneration; keeping the previous encoding marker so the next build retries them.",

@@ -28,7 +28,7 @@ function createPhotoManifestItem(id: string): PhotoManifestItem {
     dateTaken: "2024-01-01T00:00:00.000Z",
     tags: [],
     originalUrl: `/originals/${id}.jpg`,
-    thumbnailUrl: `/thumbnails/${id}.jpg`,
+    thumbnailUrl: `/thumbnails/${id}.webp`,
     thumbHash: null,
     width: 100,
     height: 100,
@@ -70,7 +70,7 @@ describe("handleDeletedPhotos", () => {
 
   it("clears only owned artifacts for an empty gallery", async () => {
     await fs.mkdir(path.join(thumbnailsDir, "unrelated"), { recursive: true });
-    await fs.writeFile(path.join(thumbnailsDir, "orphan.jpg"), "thumbnail");
+    await fs.writeFile(path.join(thumbnailsDir, "orphan.webp"), "thumbnail");
     await fs.writeFile(path.join(thumbnailsDir, "stranger.jpg"), "personal");
     await fs.writeFile(path.join(thumbnailsDir, ".encoding"), "signature");
     await fs.writeFile(path.join(thumbnailsDir, "keep.txt"), "keep");
@@ -83,7 +83,7 @@ describe("handleDeletedPhotos", () => {
       handleDeletedPhotos(outputSettings, [], undefined, new Set(["orphan"])),
     ).resolves.toBe(1);
     await expect(
-      fs.access(path.join(thumbnailsDir, "orphan.jpg")),
+      fs.access(path.join(thumbnailsDir, "orphan.webp")),
     ).rejects.toMatchObject({ code: "ENOENT" });
     await expect(
       fs.access(path.join(thumbnailsDir, ".encoding")),
@@ -101,8 +101,8 @@ describe("handleDeletedPhotos", () => {
 
   it("removes thumbnails that are no longer present in the manifest", async () => {
     await fs.mkdir(thumbnailsDir, { recursive: true });
-    await fs.writeFile(path.join(thumbnailsDir, "keep.jpg"), "");
-    await fs.writeFile(path.join(thumbnailsDir, "remove.jpg"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "keep.webp"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "remove.webp"), "");
 
     const deletedCount = await handleDeletedPhotos(
       outputSettings,
@@ -113,18 +113,18 @@ describe("handleDeletedPhotos", () => {
 
     expect(deletedCount).toBe(1);
     await expect(
-      fs.access(path.join(thumbnailsDir, "keep.jpg")),
+      fs.access(path.join(thumbnailsDir, "keep.webp")),
     ).resolves.toBeUndefined();
     await expect(
-      fs.access(path.join(thumbnailsDir, "remove.jpg")),
+      fs.access(path.join(thumbnailsDir, "remove.webp")),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
   it("keeps thumbnails of photos still present in storage (failed this run)", async () => {
     await fs.mkdir(thumbnailsDir, { recursive: true });
-    await fs.writeFile(path.join(thumbnailsDir, "keep.jpg"), "");
-    await fs.writeFile(path.join(thumbnailsDir, "failed.jpg"), "");
-    await fs.writeFile(path.join(thumbnailsDir, "gone.jpg"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "keep.webp"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "failed.webp"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "gone.webp"), "");
 
     // failed 不在 manifest（本次处理失败）但仍在存储中 → 缩略图必须保留；
     // gone 既不在 manifest 也不在存储 → 才是真正的孤儿。
@@ -137,16 +137,16 @@ describe("handleDeletedPhotos", () => {
 
     expect(deletedCount).toBe(1);
     await expect(
-      fs.access(path.join(thumbnailsDir, "failed.jpg")),
+      fs.access(path.join(thumbnailsDir, "failed.webp")),
     ).resolves.toBeUndefined();
     await expect(
-      fs.access(path.join(thumbnailsDir, "gone.jpg")),
+      fs.access(path.join(thumbnailsDir, "gone.webp")),
     ).rejects.toMatchObject({ code: "ENOENT" });
   });
 
-  it("leaves non-jpg files like the .encoding marker untouched", async () => {
+  it("leaves non-thumbnail files like the .encoding marker untouched", async () => {
     await fs.mkdir(thumbnailsDir, { recursive: true });
-    await fs.writeFile(path.join(thumbnailsDir, "keep.jpg"), "");
+    await fs.writeFile(path.join(thumbnailsDir, "keep.webp"), "");
     await fs.writeFile(path.join(thumbnailsDir, ".encoding"), "jpeg-w600-q80");
 
     const deletedCount = await handleDeletedPhotos(outputSettings, [

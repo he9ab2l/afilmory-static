@@ -15,17 +15,17 @@ import {
 describe("thumbnail URL helpers", () => {
   it("encodes generated thumbnail filenames for public URLs", () => {
     expect(getThumbnailPublicUrl("album #1?50%")).toBe(
-      "/thumbnails/album%20%231%3F50%25.jpg",
+      "/thumbnails/album%20%231%3F50%25.webp",
     );
   });
 
   it("content-addresses immutable generated thumbnails", () => {
-    const buffer = Buffer.from("encoded jpeg");
+    const buffer = Buffer.from("encoded webp");
     const fileName = createThumbnailFileName("photo", buffer);
 
     expect(fileName).toMatch(
       new RegExp(
-        `^photo\\.[\\da-f]{64}\\.${THUMBNAIL_ENCODING_VERSION}\\.jpg$`,
+        `^photo\\.[\\da-f]{64}\\.${THUMBNAIL_ENCODING_VERSION}\\.webp$`,
       ),
     );
     expect(getThumbnailPublicUrl("photo", buffer)).toBe(
@@ -65,9 +65,9 @@ describe("thumbnail URL helpers", () => {
       path.join(os.tmpdir(), "afilmory-thumbnail-"),
     );
     try {
-      await fs.mkdir(path.join(directory, "photo.jpg"));
+      await fs.mkdir(path.join(directory, "photo.webp"));
       await expect(
-        resolveExistingThumbnail("photo", directory, "/thumbnails/photo.jpg"),
+        resolveExistingThumbnail("photo", directory, "/thumbnails/photo.webp"),
       ).resolves.toBeNull();
     } finally {
       await fs.rm(directory, { force: true, recursive: true });

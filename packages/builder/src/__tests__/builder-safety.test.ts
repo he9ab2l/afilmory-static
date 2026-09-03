@@ -54,7 +54,7 @@ function createPhoto(
   return {
     id,
     originalUrl: `/photos/${id}.jpg`,
-    thumbnailUrl: `/thumbnails/${id}.jpg`,
+    thumbnailUrl: `/thumbnails/${id}.webp`,
     thumbHash: null,
     width: 32,
     height: 24,
@@ -111,7 +111,7 @@ describe("builder artifact safety", () => {
     const serialized = JSON.stringify(previous, null, 2);
     await fs.mkdir(thumbnailsDir, { recursive: true });
     await fs.writeFile(manifestPath, serialized);
-    await fs.writeFile(path.join(thumbnailsDir, "photo.jpg"), "old thumbnail");
+    await fs.writeFile(path.join(thumbnailsDir, "photo.webp"), "old thumbnail");
     await writeThumbnailEncodingMarker(thumbnailsDir);
 
     let onErrorCalled = false;
@@ -140,7 +140,7 @@ describe("builder artifact safety", () => {
     expect(onErrorCalled).toBe(true);
     expect(await fs.readFile(manifestPath, "utf8")).toBe(serialized);
     await expect(
-      fs.access(path.join(thumbnailsDir, "photo.jpg")),
+      fs.access(path.join(thumbnailsDir, "photo.webp")),
     ).resolves.toBeUndefined();
   });
 
@@ -156,7 +156,7 @@ describe("builder artifact safety", () => {
     const serialized = JSON.stringify(previous, null, 2);
     await fs.mkdir(thumbnailsDir, { recursive: true });
     await fs.writeFile(manifestPath, serialized);
-    await fs.writeFile(path.join(thumbnailsDir, "photo.jpg"), "old thumbnail");
+    await fs.writeFile(path.join(thumbnailsDir, "photo.webp"), "old thumbnail");
     await fs.writeFile(path.join(sourceDir, "photo.jpg"), "not an image");
 
     const result = await makeBuilder(config).buildManifest({
@@ -171,7 +171,7 @@ describe("builder artifact safety", () => {
     });
     expect(await fs.readFile(manifestPath, "utf8")).toBe(serialized);
     await expect(
-      fs.access(path.join(thumbnailsDir, "photo.jpg")),
+      fs.access(path.join(thumbnailsDir, "photo.webp")),
     ).resolves.toBeUndefined();
   }, 30_000);
 

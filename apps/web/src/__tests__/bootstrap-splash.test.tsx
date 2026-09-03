@@ -120,9 +120,15 @@ describe("bootstrap splash", () => {
     expect(screen.getByRole("status", { name: "Loading" })).not.toBeNull();
     expect(screen.queryByTestId("router-app")).toBeNull();
     expect(createAppRuntime).not.toHaveBeenCalled();
-    await waitFor(() => {
-      expect(markStartup).toHaveBeenCalledWith("manifest-start", undefined);
-    });
+    // jsdom 下 main.tsx 模块图求值（含 i18n 语言包 glob、样式等）约 1.6s，
+    // 超过 waitFor 默认 1s 超时；manifest 处于 pending 时 splash 应持续可见，
+    // 断言必须等待首次 markStartup 真正发生。
+    await waitFor(
+      () => {
+        expect(markStartup).toHaveBeenCalledWith("manifest-start", undefined);
+      },
+      { timeout: 10_000 },
+    );
 
     await act(async () => {
       resolveManifest(manifest);

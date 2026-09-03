@@ -8,6 +8,11 @@ import type {
 } from "~/types/map";
 import { GPSDirection } from "~/types/map";
 
+/** 只带经纬度的最小点位结构：PhotoMarker、GeographicRegion 均结构兼容。 */
+export interface MapPointLike {
+  longitude: number;
+  latitude: number;
+}
 const KM_PER_LATITUDE_DEGREE = 111.32;
 
 const isGpsAltitudeBelowSeaLevel = (
@@ -193,7 +198,9 @@ export function convertPhotosToMarkersFromEXIF(
 /**
  * Calculate the bounds and center point for a set of markers
  */
-export function calculateMapBounds(markers: PhotoMarker[]): MapBounds | null {
+export function calculateMapBounds(
+  markers: readonly MapPointLike[],
+): MapBounds | null {
   if (markers.length === 0) {
     return null;
   }

@@ -3,10 +3,7 @@ import { useAtom, useSetAtom } from "jotai";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import {
-  gallerySettingAtom,
-  isCommandPaletteOpenAtom,
-} from "~/atoms/app";
+import { gallerySettingAtom, isCommandPaletteOpenAtom } from "~/atoms/app";
 import { siteConfig } from "~/config";
 
 import { ResponsiveActionButton } from "./components/ActionButton";

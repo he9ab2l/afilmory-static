@@ -11,6 +11,7 @@ import {
   getThumbnailFileNameFromUrl,
   getThumbnailPhotoIdFromFileName,
   isThumbnailFileNameForPhoto,
+  isThumbnailImageFileName,
 } from "../image/thumbnail.js";
 import { logger } from "../logger/index.js";
 import type { BuilderOutputSettings } from "../output-paths.js";
@@ -244,7 +245,7 @@ export async function handleDeletedPhotos(
     // eligible; nested directories and unknown files remain untouched.
     for (const entry of entries) {
       if (!entry.isFile() && !entry.isSymbolicLink()) continue;
-      const isThumbnail = entry.name.endsWith(".jpg");
+      const isThumbnail = isThumbnailImageFileName(entry.name);
       const photoId = isThumbnail
         ? getThumbnailPhotoIdFromFileName(entry.name)
         : null;
@@ -287,9 +288,9 @@ export async function handleDeletedPhotos(
   }
 
   for (const thumbnail of allThumbnails) {
-    // 只清理 *.jpg 缩略图：目录里还住着 .encoding 编码签名标记（见 image/thumbnail.ts），
-    // 误删它会在构建中途崩溃后触发下一次全量重生成缩略图，废掉 artifact-cache 增量路径。
-    if (!thumbnail.endsWith(".jpg")) continue;
+    // 只清理缩略图图像文件（任意一代编码；.encoding 等非图像文件不动，
+    // 误删它会在构建中途崩溃后触发下一次全量重生成缩略图，废掉 artifact-cache 增量路径）。
+    if (!isThumbnailImageFileName(thumbnail)) continue;
     const photoId = getThumbnailPhotoIdFromFileName(thumbnail);
     // Cleanup is allowed to remove only artifacts tied to the current or
     // previously published manifest. This makes a mispointed shared directory

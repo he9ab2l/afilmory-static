@@ -199,7 +199,7 @@ describe("AfilmoryBuilder end-to-end (real sharp + exiftool + local FS)", () => 
       expect(item.thumbnailUrl).toBeTruthy();
       expect(item.thumbnailUrl).toMatch(
         new RegExp(
-          `^/thumbnails/${item.id}\\.[\\da-f]{64}\\.[\\da-f]{12}\\.jpg$`,
+          `^/thumbnails/${item.id}\\.[\\da-f]{64}\\.[\\da-f]{12}\\.webp$`,
         ),
       );
 
@@ -210,7 +210,7 @@ describe("AfilmoryBuilder end-to-end (real sharp + exiftool + local FS)", () => 
       // originalUrl 由本地 baseUrl(/photos) + key 拼出。
       expect(item.originalUrl).toBe(`/photos/${fixture.name}`);
 
-      // 缩略图 .jpg 实际落盘（每张一个）。
+      // 缩略图 .webp 实际落盘（每张一个）。
       expect(
         await pathExists(
           path.join(

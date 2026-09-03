@@ -352,8 +352,14 @@ export const usePhotoViewer = (photoCount?: number) => {
   const runtime = useAfilmoryRuntime();
 
   const closeViewer = useCallback(() => {
+    // 无障碍：关闭查看器后把焦点送回打开它的格子（triggerElement 只用于退场
+    // FLIP 定位，不还焦点会让读屏/键盘用户落回 body，必须重新 Tab 定位）。
+    // preventScroll：格子就在当前视口内（打开时可见），不能因聚焦触发滚动。
+    setTriggerElement((element) => {
+      element?.focus({ preventScroll: true });
+      return null;
+    });
     setIsOpen(false);
-    setTriggerElement(null);
     setViewerSourceMode(null);
     setViewerSourcePhotoIds(null);
   }, [

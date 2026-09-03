@@ -1,3 +1,4 @@
+import type { PhotoManifestItem } from "@afilmory/schema";
 import { RootPortal, RootPortalProvider } from "@afilmory/ui";
 import clsx from "clsx";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -7,6 +8,7 @@ import { useParams } from "react-router";
 
 import { NotFound } from "~/components/common/NotFound";
 import { PhotoViewer } from "~/components/ui/photo-viewer";
+import { useMetaDescription } from "~/hooks/useMetaDescription";
 import { usePhotoViewer, useViewerPhotos } from "~/hooks/usePhotoViewer";
 import { useTitle } from "~/hooks/useTitle";
 import { applyAccentTransitionStyle } from "~/lib/accent-transition-style";
@@ -14,6 +16,37 @@ import { deriveAccentFromSources } from "~/lib/color";
 import { getReadableTextColor } from "~/lib/color-contrast";
 import { usePhotoRouteUnavailable } from "~/providers/photo-route-availability";
 import { usePhotoRepository } from "~/runtime/app-runtime";
+
+/**
+ * 站点没有 SSR/预渲染，/photos/* 的独立摘要只能在客户端写入；
+ * robots.txt 放开了 /photos/* 抓取，渲染 JS 的爬虫靠这里拿到每张照片的描述。
+ */
+const buildPhotoMetaDescription = (
+  photo: PhotoManifestItem | null,
+): string | undefined => {
+  if (!photo) return undefined;
+
+  const takenDate = photo.dateTaken ? new Date(photo.dateTaken) : null;
+  const dateText =
+    takenDate && !Number.isNaN(takenDate.getTime())
+      ? takenDate.toISOString().slice(0, 10)
+      : null;
+  const { location } = photo;
+  const placeText =
+    location?.locationName?.trim() || location?.admin?.country?.trim() || null;
+  const make = photo.exif?.Make?.trim();
+  const model = photo.exif?.Model?.trim();
+  const cameraText = make && model ? `${make} ${model}` : null;
+
+  const parts = [
+    photo.description?.trim() || photo.title?.trim(),
+    dateText,
+    placeText,
+    cameraText,
+  ].filter(Boolean);
+
+  return parts.length > 0 ? parts.join(" · ") : undefined;
+};
 
 export const Component = () => {
   const { t } = useTranslation();
@@ -107,7 +140,9 @@ export const Component = () => {
     [ref],
   );
   useTitle(currentPhoto?.title || t("error.not-found.title"));
-
+  useMetaDescription(
+    useMemo(() => buildPhotoMetaDescription(currentPhoto), [currentPhoto]),
+  );
   const [accentColor, setAccentColor] = useState<string | null>(null);
 
   useEffect(() => {

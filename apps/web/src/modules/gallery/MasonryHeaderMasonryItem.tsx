@@ -208,7 +208,7 @@ export const MasonryHeaderMasonryItem = ({
         <div className="mb-4 flex justify-center">
           <div className="relative inline-flex">
             {siteConfig.author.avatar && (
-              <AvatarPrimitive.Root className="inline-flex size-16 items-center justify-center overflow-hidden rounded-full ring-2 ring-black/10 shadow-xl">
+              <AvatarPrimitive.Root className="inline-flex size-16 items-center justify-center overflow-hidden rounded-full shadow-xl ring-2 ring-black/10">
                 <AvatarPrimitive.Image
                   src={siteConfig.author.avatar}
                   className="size-full object-cover"
